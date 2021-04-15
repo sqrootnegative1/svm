@@ -26,7 +26,7 @@ def svm_train_dual(X, y, C):
 
     S = (alphas > threshold).flatten()
 
-    bias = y[S] - np.dot(X[S], w)
+    bias = np.mean(y[S] - np.dot(X[S], w))
 
     return w, bias
 
@@ -34,11 +34,12 @@ def svm_train_dual(X, y, C):
 def fit(X, y, C=0.5):
     w, b = svm_train_dual(X, y, C)
 
-    return w, b.sum() / b.size
+    return w, b
 
 
 def main():
     pass
+
 
 if __name__ == "__main__":
     main()

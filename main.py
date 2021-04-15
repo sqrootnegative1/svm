@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 from svm import fit
+from smo import SVM
 
 
 def main():
@@ -37,19 +38,27 @@ def main():
     def on_plot_keypress(event):
         if event.key == "enter":
             data = np.array(points)
+            np.random.seed(42)
+            np.random.shuffle(data)
             X = data[:, 0:2]
             y = data[:, -1]
 
-            w, b = fit(X, y, 1)
+            w, b = fit(X, y)
 
             xx = np.linspace(0, 10, 100)
             yy = -(w[0] / w[1]) * xx - (b / w[1])
 
             ax.plot(xx, yy, linestyle="dashdot", color="tab:blue")
             fig.canvas.draw()
+
+            classifier = SVM(X, y)
+            alpha_vector, bias = classifier.smo()
+            print(alpha_vector)
+            print(bias)
     
     cid = fig.canvas.mpl_connect("button_press_event", lambda event: on_plot_click(event, points))
     cid2 = fig.canvas.mpl_connect("key_press_event", on_plot_keypress)
+
 
     plt.show()
 

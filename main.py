@@ -37,6 +37,8 @@ def main():
         
     def on_plot_keypress(event):
         if event.key == "enter":
+            print(f"total points {len(points)}")
+
             data = np.array(points)
             np.random.seed(42)
             np.random.shuffle(data)
@@ -44,21 +46,31 @@ def main():
             y = data[:, -1]
 
             w, b = fit(X, y)
+            print(f"qp found\n {w}\nand\n{b}\n")
 
             xx = np.linspace(0, 10, 100)
             yy = -(w[0] / w[1]) * xx - (b / w[1])
 
-            ax.plot(xx, yy, linestyle="dashdot", color="tab:blue")
+            ax.plot(xx, yy, linestyle="dashdot", color="tab:blue", label="cvxopt")
             fig.canvas.draw()
 
-            classifier = SVM(X, y)
+            classifier = SVM(X, y, C=0.5)
             alpha_vector, bias = classifier.smo()
-            print(alpha_vector)
-            print(bias)
+            smo_w = (X * (alpha_vector * y).reshape(y.shape[0], 1)).sum(axis=0)
+            S = (alpha_vector > 1e-3).flatten()
+
+            bias = np.mean(y[S] - np.dot(X[S], smo_w))
+
+            print(f"smo_w found\n {smo_w}\nand\n{bias}")
+            xxx = np.linspace(0, 10, 100)
+            yyy = -(smo_w[0] / smo_w[1]) * xxx - bias / smo_w[1]
+
+            ax.plot(xxx, yyy, linestyle="dashdot", color="purple", label="smo")
+            plt.legend(loc="upper right")
+            fig.canvas.draw()
     
     cid = fig.canvas.mpl_connect("button_press_event", lambda event: on_plot_click(event, points))
     cid2 = fig.canvas.mpl_connect("key_press_event", on_plot_keypress)
-
 
     plt.show()
 

@@ -2,6 +2,8 @@ import numpy as np
 import cvxopt
 
 
+cvxopt.solvers.options["show_progress"] = False
+
 # Return weights and bias for X(feature vector) and y(labels)
 def svm_train_dual(X, y, C):
     m = X.shape[0]
@@ -20,7 +22,7 @@ def svm_train_dual(X, y, C):
     sol = cvxopt.solvers.qp(P, q, G, h, A, b)
     alphas = np.array(sol['x'])
 
-    threshold = 1e-2
+    threshold = 1e-3
 
     w = ((y * alphas).T @ X).reshape(-1, 1)
 
@@ -31,7 +33,7 @@ def svm_train_dual(X, y, C):
     return w, bias
 
 
-def fit(X, y, C=0.5):
+def fit(X, y, C=1):
     w, b = svm_train_dual(X, y, C)
 
     return w, b

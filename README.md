@@ -2,5 +2,5 @@
 SVM implementation without relying on frameworks
 
 # Goals
-- [x] Optimize using CVXOPT
+- [x] Optimize using `cvxopt` package
 - [ ] Optimize using Sequential Minimal Optimization

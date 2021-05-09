@@ -1,47 +1,49 @@
 import numpy as np
-import cvxopt
+from enum import Enum
+from svm_cvxopt import svm_cvxopt
+from smo import SMO
+
+opt_method = Enum("OptMethod", "cvxopt smo")
 
 
-cvxopt.solvers.options["show_progress"] = False
-
-# Return weights and bias for X(feature vector) and y(labels)
-def svm_train_dual(X, y, C):
-    m = X.shape[0]
-    y = y.reshape(-1, 1) * 1.0
-
-    y_X = y * X
-    H = np.dot(y_X, y_X.T)
-
-    P = cvxopt.matrix(H)
-    q = cvxopt.matrix(-np.ones((m, 1)))
-    G = cvxopt.matrix(np.vstack((np.eye(m) * (-1), np.eye(m))))
-    h = cvxopt.matrix(np.hstack((np.zeros(m), np.ones(m) * C)))
-    A = cvxopt.matrix(y.reshape(1, -1))
-    b = cvxopt.matrix(np.zeros(1))
-
-    sol = cvxopt.solvers.qp(P, q, G, h, A, b)
-    alphas = np.array(sol['x'])
-
-    threshold = 1e-3
-
-    w = ((y * alphas).T @ X).reshape(-1, 1)
-
-    S = (alphas > threshold).flatten()
-
-    bias = np.mean(y[S] - np.dot(X[S], w))
-
-    return w, bias
+class SVM:
+    def __init__(self, C=1, tol=1e-3, optimization_method=opt_method.cvxopt):
+        self.C_ = C
+        self.tol_ = tol
+        self.X = None
+        self.y = None
+        self.solved = False
+        self.w = None
+        self.b = None
+        self.support_vector_indices = None
+        self.optimization_method = optimization_method
 
 
-def fit(X, y, C=1):
-    w, b = svm_train_dual(X, y, C)
+    def fit(self, X, y, show=False):
+        """
+        Fit a classifier to a feature vector X with labels y
 
-    return w, b
+        Returns:
+            w = vector orthogonal to separating hyperplane
+            b = intercept term
+        """
 
+        self.X = X
+        self.y = y
 
-def main():
-    pass
+        if self.optimization_method == opt_method.cvxopt:
+            self.w, self.b, self.support_vector_indices = svm_cvxopt(self.X, self.y, self.C_, self.tol_)
+            self.solved = True
 
+        elif self.optimization_method == opt_method.smo:
+            smo_solver = SMO(C=self.C_, tol=self.tol_, debug=True)
+            self.w, self.b, self.support_vector_indices = smo_solver.train(X, y)
 
-if __name__ == "__main__":
-    main()
+        if show:
+            print(f"Calculated w: {self.w}")
+            print(f"Calculated b: {self.b}")
+    
+    
+    # Infer
+    def predict(self, X):
+        return np.sign(X @ self.w + self.b)

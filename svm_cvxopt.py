@@ -1,5 +1,6 @@
 import cvxopt
 import numpy as np
+from sklearn.metrics.pairwise import rbf_kernel
 
 
 # Hide progress
@@ -19,7 +20,8 @@ def svm_cvxopt(X, y, C, tol):
     cvxopt.solvers.options["feastol"] = tol
 
     # Dual coefficients summation over i and j => yi * yj * xi * xj
-    const_multipliers = (y.reshape(m, 1) @ y.reshape(1, m)) * (X @ X.T)
+    kernelized_values = rbf_kernel(X)
+    const_multipliers = (y.reshape(m, 1) @ y.reshape(1, m)) * kernelized_values
 
     # Prepare matrices according to cvxopt API
     P = cvxopt.matrix(const_multipliers)
@@ -43,4 +45,4 @@ def svm_cvxopt(X, y, C, tol):
     b = np.mean(y[alpha_indices] - (X[alpha_indices] @ w))
 
     # Done
-    return w, b, alpha_indices
+    return alphas, alpha_indices, b

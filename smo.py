@@ -1,8 +1,9 @@
 import numpy as np
+from kernels import kernel_options, linear_kernel, rbf_kernel
 
 
 class SMO:
-    def __init__(self, C=1, tol=1e-3, debug=False):
+    def __init__(self, kernel, C=1, tol=1e-3, debug=False):
         self.X = None
         self.y = None
         self.w = None
@@ -12,17 +13,10 @@ class SMO:
         self.kernelized_values = None
         self.tol_ = tol
         self.C_ = C
+        self.kernel = kernel
         self.debug = debug
 
         
-    def f_x(self, i):
-        """
-        f(x) = w.T @ x + b
-        where w = alpha_vector_ * y * x
-        """
-        return (self.alpha_vector_ * self.y).T @ self.kernel(j=i) + self.b
-
-
     def examine_example(self, i):
         m = self.X.shape[0]
         alpha_i = self.alpha_vector_[i]
@@ -80,9 +74,9 @@ class SMO:
         if L == H:
             return False
 
-        Kii = self.kernel(i, i)
-        Kjj = self.kernel(j, j)
-        Kij = self.kernel(i, j)
+        Kii = self.calc_kernel(i, i)
+        Kjj = self.calc_kernel(j, j)
+        Kij = self.calc_kernel(i, j)
 
         eta = Kii + Kjj - 2 * Kij
 
@@ -116,7 +110,6 @@ class SMO:
 
         b_i = -(ei + yi * (alpha_i_new - alpha_i) * Kii + yj * (alpha_j_new - alpha_j) * Kij) + self.b
         b_j = -(ej + yi * (alpha_i_new - alpha_i) * Kij + yj * (alpha_j_new - alpha_j) * Kjj) + self.b
-        b_old = self.b
  
         # Updating bias
         if alpha_i_new > 0 and alpha_i_new < self.C_:
@@ -131,19 +124,13 @@ class SMO:
         self.alpha_vector_[i] = alpha_i_new
         self.alpha_vector_[j] = alpha_j_new
 
-        ## w vector 
-        ### Subtract previous values and then add new values
-        w_old = self.w
-        self.w -= ((alpha_i * yi * self.X[i]) + (alpha_j * yj * self.X[j]))
-        self.w += ((alpha_i_new * yi * self.X[i]) + (alpha_j_new * yj * self.X[j]))
-
         ## E vector
         self.E_vector_ = (self.alpha_vector_ * self.y) @ self.kernelized_values - self.y
        
         return 1
 
 
-    def kernel(self, i=None, j=None):
+    def calc_kernel(self, i=None, j=None):
         """
         The kernel function phi(x)
         Options:
@@ -172,18 +159,17 @@ class SMO:
             # !! Might return nan, make sure to run the kernel function
             # at least without any arguments
             return self.kernelized_values[i, :]
-        
-        # calculate all possible kernel values
-        # Linear kernel
-        return self.X[:, np.newaxis] @ self.X.T
 
-    
-    def calculate_E(self, i):
-        """
-        Calculate error value for i-th training example
-        """
-        pass
-        
+        # Calculate all kernel values
+        if self.kernel == kernel_options.linear:
+            kernelized_values = linear_kernel(self.X)
+        elif self.kernel == kernel_options.rbf:
+            kernelized_values = rbf_kernel(self.X)
+        else:
+            raise ValueError("smo: asked to use unknown kernel")
+
+        return kernelized_values
+
 
     """
     Fit a classifier to a feature vector X with labels y
@@ -202,7 +188,7 @@ class SMO:
         self.b = 0
 
         # Calculate kernel values beforehand
-        self.kernelized_values = self.kernel().reshape(m, m)
+        self.kernelized_values = self.calc_kernel().reshape(m, m)
 
         num_changed = 0
         examine_all = True
@@ -229,12 +215,9 @@ class SMO:
         if self.debug:
             print(f"smo: took {iters} iterations to converge")
                 
-        # Calculate w using alphas
-        w = (self.alpha_vector_ * self.y).T @ self.X
-
-        # Calculate final weights and intercept
+        # Calculate support vector indices
         alpha_indices = (self.alpha_vector_ > self.tol_).flatten()
-        #w = (self.alpha_vector_[alpha_indices] * y[alpha_indices]) @ self.X[alpha_indices]
-        b = np.mean(self.y[alpha_indices] - (self.X[alpha_indices] @ w))
+        indices_to_ignore = (self.alpha_vector_ < self.tol_).flatten()
+        self.alpha_vector_[indices_to_ignore] = 0
 
-        return w, b, alpha_indices
+        return self.alpha_vector_, alpha_indices, self.b

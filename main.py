@@ -7,14 +7,16 @@ from matplotlib.colors import ListedColormap
 import seaborn as sns
 
 from svm import SVM, opt_method
-from kernels import kernel_options
-from sklearn import svm
+from kernels import kernel_options, rbf_kernel
+#from sklearn import svm
 
 
 def main():
     parser = argparse.ArgumentParser(description="Test Support Vector Machines")
     parser.add_argument("-n", help="register new data", action="store_true")
     parser.add_argument("--kernel", help="specify kernel function (linear, rbf, polynomial). Default linear.", default="linear")
+    parser.add_argument("--gamma", help="gamma parameter for rbf kernel", default=1)
+    parser.add_argument("--C", help="Regularization parameter for svm", default=1)
     args = parser.parse_args()
 
     if args.kernel == "linear":
@@ -25,6 +27,9 @@ def main():
         kernel_function = kernel_options.polynomial
     else:
         raise ValueError("Unknown kernel provided")
+
+    gamma = float(args.gamma)
+    C = float(args.C)
 
     if args.n:
         points = []
@@ -72,11 +77,11 @@ def main():
         y = data[:, -1]
 
         # Train using custom svm
-        svm_clf = SVM(C=1, tol=1e-3, kernel=kernel_function, optimization_method=opt_method.smo)     # default cvxopt
+        svm_clf = SVM(C=C, tol=1e-3, kernel=kernel_function, optimization_method=opt_method.smo, gamma=gamma)     # default cvxopt
         svm_clf.fit(X, y)
 
         # Train using scikit-learn
-        #svm_clf = svm.SVC(kernel="rbf")
+        #svm_clf = svm.SVC()
         #svm_clf.fit(X, y)
 
         # Plot

@@ -3,7 +3,7 @@ from kernels import kernel_options, linear_kernel, rbf_kernel
 
 
 class SMO:
-    def __init__(self, kernel, C=1, tol=1e-3, debug=False):
+    def __init__(self, kernel, C=1, tol=1e-3, gamma=1, debug=False):
         self.X = None
         self.y = None
         self.w = None
@@ -15,8 +15,9 @@ class SMO:
         self.C_ = C
         self.kernel = kernel
         self.debug = debug
+        self.gamma = gamma
 
-        
+
     def examine_example(self, i):
         m = self.X.shape[0]
         alpha_i = self.alpha_vector_[i]
@@ -125,7 +126,7 @@ class SMO:
         self.alpha_vector_[j] = alpha_j_new
 
         ## E vector
-        self.E_vector_ = (self.alpha_vector_ * self.y) @ self.kernelized_values - self.y
+        self.E_vector_ = ((self.alpha_vector_ * self.y) @ self.kernelized_values + self.b) - self.y
        
         return 1
 
@@ -139,7 +140,7 @@ class SMO:
             - Kij if i and j parameters are specified
             - j-th column of kernel matrix if only j is specified
             - i-th row of kernel matrix if only i is specified
-            - the whole kernel matrix is no parameter is specified
+            - the whole kernel matrix if no parameter is specified
         """
 
         if i != None and j != None:
@@ -164,7 +165,7 @@ class SMO:
         if self.kernel == kernel_options.linear:
             kernelized_values = linear_kernel(self.X)
         elif self.kernel == kernel_options.rbf:
-            kernelized_values = rbf_kernel(self.X)
+            kernelized_values = rbf_kernel(self.X, gamma=self.gamma)
         else:
             raise ValueError("smo: asked to use unknown kernel")
 

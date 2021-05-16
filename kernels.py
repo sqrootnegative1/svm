@@ -22,7 +22,7 @@ def linear_kernel(X, Y=None):
     return X @ Y.T
 
 
-def rbf_kernel(X, Y=None, sigma=1):
+def rbf_kernel(X, Y=None, gamma=1):
     """
     Compute rbf kernel pairwise for each x in X and y in Y
 
@@ -39,7 +39,7 @@ def rbf_kernel(X, Y=None, sigma=1):
     X = X.reshape(X.shape[0], 1, X.shape[1])
     norm_sq = np.power(np.linalg.norm(X - Y, axis=2), 2)
 
-    exp_pow = -1 * norm_sq / (2 * (sigma ** 2))
+    exp_pow = -1 * gamma * norm_sq
 
     return np.exp(exp_pow)
 

@@ -9,7 +9,7 @@ opt_method = Enum("OptMethod", "cvxopt smo")
 
 
 class SVM:
-    def __init__(self, C=1, tol=1e-3, optimization_method=opt_method.cvxopt, kernel=kernel_options.linear):
+    def __init__(self, C=1, tol=1e-3, optimization_method=opt_method.cvxopt, kernel=kernel_options.linear, gamma=1):
         self.C_ = C
         self.tol_ = tol
         self.X = None
@@ -21,6 +21,7 @@ class SVM:
         self.alphas = None
         self.optimization_method = optimization_method
         self.kernel = kernel
+        self.gamma = gamma  # For rbf kernel
 
 
     def fit(self, X, y, show=False):
@@ -36,7 +37,7 @@ class SVM:
             self.solved = True
 
         elif self.optimization_method == opt_method.smo:
-            smo_solver = SMO(kernel=self.kernel, C=self.C_, tol=self.tol_, debug=True)
+            smo_solver = SMO(kernel=self.kernel, C=self.C_, tol=self.tol_, gamma=self.gamma, debug=True)
             self.alphas, self.support_vector_indices, self.b = smo_solver.train(X, y)
             self.solved = True
 
@@ -46,7 +47,7 @@ class SVM:
         if self.kernel == kernel_options.linear:
             self.w = (self.alphas * self.y).T @ self.X
             self.w = self.w.reshape(-1, 1)
-            self.b = np.mean(self.y[self.support_vector_indices] - (self.X[self.support_vector_indices] @ self.w)) 
+            #self.b = np.mean(self.y[self.support_vector_indices] - (self.X[self.support_vector_indices] @ self.w)) 
 
         if show:
             print(f"Calculated alpha vector: {self.alphas}")
@@ -65,7 +66,7 @@ class SVM:
         # Else project into higher dimensions
         ## RBF
         if self.kernel == kernel_options.rbf:
-            return (self.alphas * self.y) @ rbf_kernel(self.X, X_test)
+            return (self.alphas * self.y) @ rbf_kernel(self.X, X_test, gamma=self.gamma) + self.b
         
         raise ValueError("svm: unknown kernel provided")
     
